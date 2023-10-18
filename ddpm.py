@@ -8,6 +8,7 @@ from utils import *
 from modules import UNet
 import logging
 from torch.utils.tensorboard import SummaryWriter
+import fire
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
 
@@ -36,12 +37,12 @@ class Diffusion:
     def sample_timesteps(self, n):
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
 
-    def sample(self, model, n):
-        logging.info(f"Sampling {n} new images....")
+    def sample(self, model, n, show_progress: bool=True):
         model.eval()
         with torch.no_grad():
             x = torch.randn((n, 3, self.img_size, self.img_size)).to(self.device)
-            for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
+            iterator = tqdm(reversed(range(1, self.noise_steps)), unit="step") if show_progress else reversed(range(1, self.noise_steps))
+            for i in iterator:
                 t = (torch.ones(n) * i).long().to(self.device)
                 predicted_noise = model(x, t)
                 alpha = self.alpha[t][:, None, None, None]
@@ -68,10 +69,9 @@ def train(args):
     diffusion = Diffusion(img_size=args.image_size, device=device)
     logger = SummaryWriter(os.path.join("runs", args.run_name))
     l = len(dataloader)
-
     for epoch in range(args.epochs):
-        logging.info(f"Starting epoch {epoch}:")
-        pbar = tqdm(dataloader)
+        logging.info(f"Starting epoch {epoch+1}/{args.epochs}:")
+        pbar = tqdm(dataloader, unit="batch")
         for i, (images, _) in enumerate(pbar):
             images = images.to(device)
             t = diffusion.sample_timesteps(images.shape[0]).to(device)
@@ -86,36 +86,80 @@ def train(args):
             pbar.set_postfix(MSE=loss.item())
             logger.add_scalar("MSE", loss.item(), global_step=epoch * l + i)
 
-        sampled_images = diffusion.sample(model, n=images.shape[0])
-        save_images(sampled_images, os.path.join("results", args.run_name, f"{epoch}.jpg"))
+        # sampled_images = diffusion.sample(model, n=images.shape[0])
+        if epoch % 10 == 0:
+            sampled_images = diffusion.sample(model, n=4)
+            save_images(sampled_images, os.path.join("results", args.run_name, f"epoch_{epoch+1}.jpg"))
         torch.save(model.state_dict(), os.path.join("models", args.run_name, f"ckpt.pt"))
 
 
-def launch():
+def launch_training(
+    dataset: str,
+    run_name: str="untitled",
+    epochs: int=500,
+    batch_size: int=1,
+    img_size: int=64,
+    device: str="cuda",
+    lr: float=3e-4
+):
+    """
+    Launches a training session.
+    Train a new model. In the future, it will allows to continue training an existing one.
+
+    Args:
+        dataset (str): path to the directory containing the dataset.
+        run_name (str, optional): name to give to the run. Defaults to "untitled".
+        epochs (int, optional): epoch count. Defaults to 500.
+        batch_size (int, optional): size of the batches. Defaults to 1.
+        img_size (int, optional): size of the images (in pixels). Defaults to 64.
+        device (str, optional): device on which pytorch will be running. Defaults to "cuda".
+        lr (float, optional): learning rate of the model. Defaults to 3e-4.
+    """
     import argparse
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
-    args.run_name = "DDPM_Uncondtional"
-    args.epochs = 500
-    args.batch_size = 12
-    args.image_size = 64
-    args.dataset_path = r"C:\Users\dome\datasets\landscape_img_folder"
-    args.device = "cuda"
-    args.lr = 3e-4
+    args.dataset_path = dataset
+    args.run_name = run_name
+    args.epochs = epochs
+    args.batch_size = batch_size
+    args.image_size = img_size
+    args.device = device
+    args.lr = lr
     train(args)
 
+def launch_sampling(
+    n_img: int=1,
+    run_name: str="untitled",
+    name: str="samples",
+    device: str="cuda",
+    img_size: int=64,
+    save_grid: bool=False
+):
+    """
+    Samples images using a model trained previously.
 
+    Args:
+        n_img (int, optional): how many images should be sampled. Defaults to 1.
+        run_name (str, optional): name of the run, shoud be the one used when training the model. Defaults to "untitled".
+        name (str, optional): name of the folder in which the sampled images will be saved. Defaults to "samples".
+        device (str, optional): device on which pytorch will be running. Defaults to "cuda".
+        img_size (int, optional): size of the images to sample, should be size used when training the model. Defaults to 64.
+        save_grid (bool, optional): whether to save a collage of the samples at the end or not. Defaults to False.
+    """
+    model = UNet().to(device)
+    model.load_state_dict(torch.load(f"./models/{run_name}/ckpt.pt"))
+    diffusion = Diffusion(img_size=img_size, device=device)
+    dir_path = f"./results/{run_name}/{name}/"
+    os.makedirs(dir_path, exist_ok=True)
+    for i in tqdm(range(n_img), desc=f"Sampling {n_img} images", unit="image", position=0):
+        sampled_images = diffusion.sample(model, 1, show_progress=False)
+        save_images(sampled_images, dir_path+f"sample_{i+1}.jpg")
+    if save_grid: save_image_grid(dir_path, img_size)
+    logging.info(f"Sampled {n_img} images, saved at {dir_path}")
+    
 if __name__ == '__main__':
-    launch()
-    # device = "cuda"
-    # model = UNet().to(device)
-    # ckpt = torch.load("./working/orig/ckpt.pt")
-    # model.load_state_dict(ckpt)
-    # diffusion = Diffusion(img_size=64, device=device)
-    # x = diffusion.sample(model, 8)
-    # print(x.shape)
-    # plt.figure(figsize=(32, 32))
-    # plt.imshow(torch.cat([
-    #     torch.cat([i for i in x.cpu()], dim=-1),
-    # ], dim=-2).permute(1, 2, 0).cpu())
-    # plt.show()
+    fire.Fire({
+        "train": launch_training,
+        "sample": launch_sampling
+    })
+    
