@@ -89,13 +89,13 @@ def train(args):
         # sampled_images = diffusion.sample(model, n=images.shape[0])
         if epoch % 10 == 0:
             sampled_images = diffusion.sample(model, n=4)
-            save_images(sampled_images, os.path.join("results", args.run_name, f"epoch_{epoch+1}.jpg"))
+            save_images(sampled_images, os.path.join("results", args.run_name, f"training_progress/epoch_{epoch+1}.jpg"))
         torch.save(model.state_dict(), os.path.join("models", args.run_name, f"ckpt.pt"))
 
 
 def launch_training(
-    dataset: str,
     run_name: str="untitled",
+    dataset: str="./datasets/landscapes",
     epochs: int=500,
     batch_size: int=1,
     img_size: int=64,
@@ -115,16 +115,15 @@ def launch_training(
         device (str, optional): device on which pytorch will be running. Defaults to "cuda".
         lr (float, optional): learning rate of the model. Defaults to 3e-4.
     """
-    import argparse
-    parser = argparse.ArgumentParser()
-    args = parser.parse_args()
-    args.dataset_path = dataset
-    args.run_name = run_name
-    args.epochs = epochs
-    args.batch_size = batch_size
-    args.image_size = img_size
-    args.device = device
-    args.lr = lr
+    args = dotdict({
+        "dataset_path": dataset,
+        "run_name": run_name,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "image_size": img_size,
+        "device": device,
+        "lr": lr
+    })
     train(args)
 
 def launch_sampling(

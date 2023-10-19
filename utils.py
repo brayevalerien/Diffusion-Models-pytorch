@@ -6,10 +6,15 @@ from matplotlib import pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 def plot_images(images: torch.Tensor):
     """
-    Create a small image grid from a tensor and plots them. 
+    Create a small image grid from a tensor and plots them.
 
     Args:
         images (torch.Tensor): the tensor containing the images
@@ -19,7 +24,6 @@ def plot_images(images: torch.Tensor):
         torch.cat([i for i in images.cpu()], dim=-1),
     ], dim=-2).permute(1, 2, 0).cpu())
     plt.show()
-
 
 def save_images(images: torch.Tensor, path: str, **kwargs):
     """
@@ -33,7 +37,6 @@ def save_images(images: torch.Tensor, path: str, **kwargs):
     ndarr = grid.permute(1, 2, 0).to('cpu').numpy()
     im = Image.fromarray(ndarr)
     im.save(path)
-
 
 def get_data(args: dict) -> DataLoader:
     """
@@ -80,7 +83,6 @@ def save_image_grid(dir_path: str, img_size: int=64, grid_name: str="samples.jpg
             x = 0
             y += img_size
     grid.save(os.path.join(dir_path, grid_name))
-
 
 def setup_logging(run_name: str):
     """
