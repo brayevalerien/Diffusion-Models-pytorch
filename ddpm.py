@@ -66,12 +66,11 @@ def train(args):
     model = UNet().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     last_epoch = 0
-    if args.resume:
-        ckpt_path = f"./models/{args.run_name}/checkpoint.pt"
-        if os.path.exists(ckpt_path):
-            model, optimizer, last_epoch = load_checkpoint(model, optimizer, ckpt_path)
-            last_epoch+=1
-            logging.info(f"Resuming training at epoch {last_epoch}.")
+    ckpt_path = f"./models/{args.run_name}/checkpoint.pt"
+    if args.resume and os.path.exists(ckpt_path):
+        model, optimizer, last_epoch = load_checkpoint(model, optimizer, ckpt_path)
+        last_epoch+=1
+        logging.info(f"Resuming training at epoch {last_epoch+1}.")
     mse = nn.MSELoss()
     diffusion = Diffusion(img_size=args.image_size, device=device)
     logger = SummaryWriter(os.path.join("runs", args.run_name))
@@ -90,10 +89,10 @@ def train(args):
             optimizer.step()
             pbar.set_postfix(MSE=loss.item())
             logger.add_scalar("MSE", loss.item(), global_step=epoch * l + i)
+        save_checkpoint(model, optimizer, ckpt_path, epoch)
         if epoch % 10 == 0:
             sampled_images = diffusion.sample(model, n=4)
             save_images(sampled_images, os.path.join("results", args.run_name, f"training_progress/epoch_{epoch+1}.jpg"))
-        torch.save(model.state_dict(), os.path.join("models", args.run_name, f"ckpt.pt"))
 
 
 def launch_training(
