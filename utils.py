@@ -83,6 +83,44 @@ def save_image_grid(dir_path: str, img_size: int=64, grid_name: str="samples.jpg
             x = 0
             y += img_size
     grid.save(os.path.join(dir_path, grid_name))
+    
+def save_checkpoint(model, optimizer, save_path, epoch) -> None:
+    """
+    Saves the state of a model and the optimizer to make it possible to resume training from the last saved checkpoint.
+
+    Args:
+        model: model to save
+        optimizer: optimizer used to train the model
+        save_path: where to store the checkpoint
+        epoch: epoch at which the checkpoint is saved
+
+    Source: https://stackoverflow.com/a/63655261/22117082
+    """
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epoch': epoch
+    }, save_path)
+    
+def load_checkpoint(model, optimizer, load_path):
+    """
+    Loads a saved checkpoint to resume training of a model.
+
+    Args:
+        model: saved model
+        optimizer: optimizer used to train the model
+        load_path: where the checkpoint is saved
+
+    Returns:
+        saved model, optimizer and epoch
+        
+    Source: https://stackoverflow.com/a/63655261/22117082
+    """
+    checkpoint = torch.load(load_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch = checkpoint['epoch']
+    return model, optimizer, epoch
 
 def setup_logging(run_name: str):
     """

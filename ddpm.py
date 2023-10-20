@@ -65,11 +65,18 @@ def train(args):
     dataloader = get_data(args)
     model = UNet().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+    last_epoch = 0
+    if args.resume:
+        ckpt_path = f"./models/{args.run_name}/checkpoint.pt"
+        if os.path.exists(ckpt_path):
+            model, optimizer, last_epoch = load_checkpoint(model, optimizer, ckpt_path)
+            last_epoch+=1
+            logging.info(f"Resuming training at epoch {last_epoch}.")
     mse = nn.MSELoss()
     diffusion = Diffusion(img_size=args.image_size, device=device)
     logger = SummaryWriter(os.path.join("runs", args.run_name))
     l = len(dataloader)
-    for epoch in range(args.epochs):
+    for epoch in range(last_epoch, args.epochs):
         logging.info(f"Starting epoch {epoch+1}/{args.epochs}:")
         pbar = tqdm(dataloader, unit="batch")
         for i, (images, _) in enumerate(pbar):
@@ -78,11 +85,9 @@ def train(args):
             x_t, noise = diffusion.noise_images(images, t)
             predicted_noise = model(x_t, t)
             loss = mse(noise, predicted_noise)
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
             pbar.set_postfix(MSE=loss.item())
             logger.add_scalar("MSE", loss.item(), global_step=epoch * l + i)
         if epoch % 10 == 0:
@@ -98,7 +103,8 @@ def launch_training(
     batch_size: int=1,
     img_size: int=64,
     device: str="cuda",
-    lr: float=3e-4
+    lr: float=3e-4,
+    resume: bool=True
 ):
     """
     Launches a training session.
@@ -112,6 +118,7 @@ def launch_training(
         img_size (int, optional): size of the images (in pixels). Defaults to 64.
         device (str, optional): device on which pytorch will be running. Defaults to "cuda".
         lr (float, optional): learning rate of the model. Defaults to 3e-4.
+        resume (bool, optional): if True and a checkpoint is saved, will resume training from last checkpoint. Defaults to True.
     """
     args = dotdict({
         "dataset_path": dataset,
@@ -120,7 +127,8 @@ def launch_training(
         "batch_size": batch_size,
         "image_size": img_size,
         "device": device,
-        "lr": lr
+        "lr": lr,
+        "resume": resume
     })
     train(args)
 
