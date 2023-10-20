@@ -6,6 +6,7 @@ __pycache__/
 # Log/results files
 runs/*
 results/*
+datasets/*
 
 # C extensions
 *.so

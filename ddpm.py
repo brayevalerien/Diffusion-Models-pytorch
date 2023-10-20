@@ -41,7 +41,7 @@ class Diffusion:
         model.eval()
         with torch.no_grad():
             x = torch.randn((n, 3, self.img_size, self.img_size)).to(self.device)
-            iterator = tqdm(reversed(range(1, self.noise_steps)), unit="step") if show_progress else reversed(range(1, self.noise_steps))
+            iterator = tqdm(reversed(range(1, self.noise_steps)), desc=f"Sampling {n} images", unit="step") if show_progress else reversed(range(1, self.noise_steps))
             for i in iterator:
                 t = (torch.ones(n) * i).long().to(self.device)
                 predicted_noise = model(x, t)
@@ -85,8 +85,6 @@ def train(args):
 
             pbar.set_postfix(MSE=loss.item())
             logger.add_scalar("MSE", loss.item(), global_step=epoch * l + i)
-
-        # sampled_images = diffusion.sample(model, n=images.shape[0])
         if epoch % 10 == 0:
             sampled_images = diffusion.sample(model, n=4)
             save_images(sampled_images, os.path.join("results", args.run_name, f"training_progress/epoch_{epoch+1}.jpg"))
