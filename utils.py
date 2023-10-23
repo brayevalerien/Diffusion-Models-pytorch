@@ -133,3 +133,4 @@ def setup_logging(run_name: str):
     os.makedirs("results", exist_ok=True)
     os.makedirs(os.path.join("models", run_name), exist_ok=True)
     os.makedirs(os.path.join("results", run_name), exist_ok=True)
+    os.makedirs(os.path.join("results", run_name, "training_progress"), exist_ok=True)

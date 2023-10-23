@@ -151,7 +151,7 @@ def launch_sampling(
         save_grid (bool, optional): whether to save a collage of the samples at the end or not. Defaults to False.
     """
     model = UNet().to(device)
-    model.load_state_dict(torch.load(f"./models/{run_name}/ckpt.pt"))
+    model, _, _ = load_checkpoint(model, optim.AdamW(model.parameters()), f"./models/{run_name}/checkpoint.pt")
     diffusion = Diffusion(img_size=img_size, device=device)
     dir_path = f"./results/{run_name}/{name}/"
     os.makedirs(dir_path, exist_ok=True)
