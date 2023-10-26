@@ -31,7 +31,9 @@ python ddpm.py sample --help
 ## Example
 An example dataset is provided at [./datasets/landscapes/](./datasets/landscapes/) if you do not have one. It is a set of +4000 pictures of landscapes, taken from [Kaggle](https://www.kaggle.com/code/nextlevelkrinj/dcgan-landscape-image-generation). <br>
 If you do not have the time to train the model yourself and only want to try to sample, you can use the example pretrained model by using "landscapes" as the run name in the sampling command. This model has been trained in 500 epochs and produced the following samples:
-![samples](./sampled_landscapes.jpg)
+![samples of landscapes](./sampled_landscapes.jpg)
+Here is another example of images produced by a model trained in 500 epochs (learning rate: 1e-4) on the MNIST dataset:
+![samples of mnist](./sampled_mnist.jpg)
 
 <hr>
 
