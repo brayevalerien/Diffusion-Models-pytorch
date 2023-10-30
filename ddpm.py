@@ -60,11 +60,11 @@ class Diffusion:
         return x
 
 
-def train(args):
+def train(args: dotdict):
     setup_logging(args.run_name)
     device = args.device
     dataloader = get_data(args)
-    model = UNet(img_size=args.image_size).to(device)
+    model = UNet(img_size=args.image_size, device=args.device).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     last_epoch = 0
     ckpt_path = f"./models/{args.run_name}/checkpoint.pt"
@@ -155,7 +155,11 @@ def launch_sampling(
         img_size (int, optional): size of the images to sample, should be size used when training the model, must be a MULTIPLE OF 8. Defaults to 64.
         save_grid (bool, optional): whether to save a collage of the samples at the end or not. Defaults to False.
     """
-    model = UNet().to(device)
+    if img_size%8 != 0:
+        prev_img_size = img_size
+        img_size = math.ceil((img_size+7)//8) * 8
+        logging.warning(f"The img_size you provided ({prev_img_size}) is not a multiple of 8. It has been rounded to the closest greater multiple of 8 ({img_size}).")
+    model = UNet(img_size=img_size).to(device)
     model, _, _ = load_checkpoint(model, optim.AdamW(model.parameters()), f"./models/{run_name}/checkpoint.pt")
     diffusion = Diffusion(img_size=img_size, device=device)
     dir_path = f"./results/{run_name}/{name}/"

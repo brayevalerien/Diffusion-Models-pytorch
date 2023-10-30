@@ -33,7 +33,7 @@ class EMA:
 
 
 class SelfAttention(nn.Module):
-    def __init__(self, channels, size):
+    def __init__(self, channels: torch.Tensor, size: int):
         super(SelfAttention, self).__init__()
         self.channels = channels
         self.size = size
@@ -56,7 +56,7 @@ class SelfAttention(nn.Module):
 
 
 class DoubleConv(nn.Module):
-    def __init__(self, in_channels, out_channels, mid_channels=None, residual=False):
+    def __init__(self, in_channels: int, out_channels: int, mid_channels: int=None, residual: bool=False):
         super().__init__()
         self.residual = residual
         if not mid_channels:
@@ -69,7 +69,7 @@ class DoubleConv(nn.Module):
             nn.GroupNorm(1, out_channels),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         if self.residual:
             return F.gelu(x + self.double_conv(x))
         else:
@@ -77,7 +77,7 @@ class DoubleConv(nn.Module):
 
 
 class Down(nn.Module):
-    def __init__(self, in_channels, out_channels, emb_dim=256):
+    def __init__(self, in_channels: int, out_channels: int, emb_dim: int=256):
         super().__init__()
         self.maxpool_conv = nn.Sequential(
             nn.MaxPool2d(2),
@@ -93,16 +93,15 @@ class Down(nn.Module):
             ),
         )
 
-    def forward(self, x, t):
+    def forward(self, x: torch.Tensor, t: torch.Tensor):
         x = self.maxpool_conv(x)
         emb = self.emb_layer(t)[:, :, None, None].repeat(1, 1, x.shape[-2], x.shape[-1])
         return x + emb
 
 
 class Up(nn.Module):
-    def __init__(self, in_channels, out_channels, emb_dim=256):
+    def __init__(self, in_channels: int, out_channels: int, emb_dim: int=256):
         super().__init__()
-
         self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
         self.conv = nn.Sequential(
             DoubleConv(in_channels, in_channels, residual=True),
@@ -117,7 +116,7 @@ class Up(nn.Module):
             ),
         )
 
-    def forward(self, x, skip_x, t):
+    def forward(self, x: torch.Tensor, skip_x: torch.Tensor, t: torch.Tensor):
         x = self.up(x)
         x = torch.cat([skip_x, x], dim=1)
         x = self.conv(x)
@@ -126,7 +125,7 @@ class Up(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, img_size=64, c_in=3, c_out=3, time_dim=256, device="cuda"):
+    def __init__(self, img_size: int=64, c_in: int=3, c_out: int=3, time_dim: int=256, device: str="cuda"):
         super().__init__()
         self.device = device
         self.time_dim = time_dim
@@ -150,7 +149,7 @@ class UNet(nn.Module):
         self.sa6 = SelfAttention(64, img_size)
         self.outc = nn.Conv2d(64, c_out, kernel_size=1)
 
-    def pos_encoding(self, t, channels):
+    def pos_encoding(self, t: torch.Tensor, channels: int):
         inv_freq = 1.0 / (
             10000
             ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
@@ -160,7 +159,7 @@ class UNet(nn.Module):
         pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
         return pos_enc
 
-    def forward(self, x, t):
+    def forward(self, x: torch.Tensor, t: torch.Tensor):
         t = t.unsqueeze(-1).type(torch.float)
         t = self.pos_encoding(t, self.time_dim)
 
@@ -188,7 +187,7 @@ class UNet(nn.Module):
 
 
 class UNet_conditional(nn.Module):
-    def __init__(self, c_in=3, c_out=3, time_dim=256, num_classes=None, device="cuda"):
+    def __init__(self, c_in: int=3, c_out: int=3, time_dim: int=256, num_classes: int=None, device: str="cuda"):
         super().__init__()
         self.device = device
         self.time_dim = time_dim
@@ -215,7 +214,7 @@ class UNet_conditional(nn.Module):
         if num_classes is not None:
             self.label_emb = nn.Embedding(num_classes, time_dim)
 
-    def pos_encoding(self, t, channels):
+    def pos_encoding(self, t: torch.Tensor, channels: int):
         inv_freq = 1.0 / (
             10000
             ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
@@ -225,7 +224,7 @@ class UNet_conditional(nn.Module):
         pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
         return pos_enc
 
-    def forward(self, x, t, y):
+    def forward(self, x: torch.Tensor, t: torch.Tensor, y: torch.Tensor):
         t = t.unsqueeze(-1).type(torch.float)
         t = self.pos_encoding(t, self.time_dim)
 

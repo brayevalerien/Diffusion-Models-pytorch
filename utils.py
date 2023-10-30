@@ -5,6 +5,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader
+from modules import UNet
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
@@ -84,7 +85,7 @@ def save_image_grid(dir_path: str, img_size: int=64, grid_name: str="samples.jpg
             y += img_size
     grid.save(os.path.join(dir_path, grid_name))
     
-def save_checkpoint(model, optimizer, save_path, epoch) -> None:
+def save_checkpoint(model: UNet, optimizer: torch.optim.Optimizer, save_path: str, epoch: int) -> None:
     """
     Saves the state of a model and the optimizer to make it possible to resume training from the last saved checkpoint.
 
@@ -102,7 +103,7 @@ def save_checkpoint(model, optimizer, save_path, epoch) -> None:
         'epoch': epoch
     }, save_path)
     
-def load_checkpoint(model, optimizer, load_path):
+def load_checkpoint(model: UNet, optimizer: torch.optim.Optimizer, load_path: str):
     """
     Loads a saved checkpoint to resume training of a model.
 
