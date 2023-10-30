@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
@@ -63,7 +64,7 @@ def train(args):
     setup_logging(args.run_name)
     device = args.device
     dataloader = get_data(args)
-    model = UNet().to(device)
+    model = UNet(img_size=args.image_size).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     last_epoch = 0
     ckpt_path = f"./models/{args.run_name}/checkpoint.pt"
@@ -114,11 +115,15 @@ def launch_training(
         run_name (str, optional): name to give to the run. Defaults to "untitled".
         epochs (int, optional): epoch count. Defaults to 500.
         batch_size (int, optional): size of the batches. Defaults to 1.
-        img_size (int, optional): size of the images (in pixels). Defaults to 64.
+        img_size (int, optional): size of the images (in pixels), must be a MULTIPLE OF 8. Defaults to 64.
         device (str, optional): device on which pytorch will be running. Defaults to "cuda".
         lr (float, optional): learning rate of the model. Defaults to 3e-4.
         resume (bool, optional): if True and a checkpoint is saved, will resume training from last checkpoint. Defaults to True.
     """
+    if img_size%8 != 0:
+        prev_img_size = img_size
+        img_size = math.ceil((img_size+7)//8) * 8
+        logging.warning(f"The img_size you provided ({prev_img_size}) is not a multiple of 8. It has been rounded to the closest greater multiple of 8 ({img_size}).")
     args = dotdict({
         "dataset_path": dataset,
         "run_name": run_name,
@@ -147,7 +152,7 @@ def launch_sampling(
         run_name (str, optional): name of the run, shoud be the one used when training the model. Defaults to "untitled".
         name (str, optional): name of the folder in which the sampled images will be saved. Defaults to "samples".
         device (str, optional): device on which pytorch will be running. Defaults to "cuda".
-        img_size (int, optional): size of the images to sample, should be size used when training the model. Defaults to 64.
+        img_size (int, optional): size of the images to sample, should be size used when training the model, must be a MULTIPLE OF 8. Defaults to 64.
         save_grid (bool, optional): whether to save a collage of the samples at the end or not. Defaults to False.
     """
     model = UNet().to(device)
